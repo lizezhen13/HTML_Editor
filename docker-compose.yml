@@ -1,19 +1,44 @@
+# ─────────────────────────────────────────────────────────────
+#  Docker Compose for HTML_Editor
+#  使用方式：
+#    docker compose up -d --build        # 普通构建
+#    docker compose logs -f html-editor  # 查看日志
+#    docker compose down                 # 停止服务
+#
+#  国内用户若拉取基础镜像慢，请任选其一：
+#  1. 在 Dockerfile 中 ARG NODE_IMAGE 改为国内镜像地址
+#  2. 给 Docker 配置镜像加速器（推荐）：
+#     打开 Docker Desktop → Settings → Docker Engine → 编辑 daemon.json：
+#     {
+#       "registry-mirrors": [
+#         "https://docker.m.daocloud.io",
+#         "https://dockerproxy.com",
+#         "https://hub-mirror.c.163.com",
+#         "https://registry.cn-hangzhou.aliyuncs.com"
+#       ]
+#     }
+# ─────────────────────────────────────────────────────────────
+
 services:
   html-editor:
+    # 容器名称，可按需修改
+    container_name: html-editor
     build:
       context: .
-    container_name: html-editor
-    init: true
+      dockerfile: Dockerfile
+      # 国内镜像地址，加速基础镜像拉取；若不可用可替换为其他 Docker 镜像源
+      args:
+        NODE_IMAGE: docker.m.daocloud.io/library/node:20-slim
     ports:
+      # 主机端口:容器端口，默认 1214
       - "1214:1214"
-    volumes:
-      - partykit-data:/app/.partykit
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:1214"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    environment:
+      # 保持国内 npm 镜像，避免容器内重新安装时慢
+      - npm_config_registry=https://registry.npmmirror.com
     restart: unless-stopped
+    networks:
+      - html-editor-net
 
-volumes:
-  partykit-data:
+networks:
+  html-editor-net:
+    driver: bridge

@@ -1,0 +1,10 @@
+# Vercel 部署时忽略的文件
+node_modules
+dist
+.git
+.github
+.vscode
+.idea
+*.log
+.DS_Store
+Thumbs.db

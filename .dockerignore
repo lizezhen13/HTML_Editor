@@ -1,12 +1,27 @@
+# 忽略依赖目录，避免把它们复制到构建上下文中
 node_modules
-.partykit
-.wrangler
+
+# 忽略包管理锁文件（如果希望使用 Docker 内重新生成，可保留；否则保留）
+# package-lock.json
+
+# 忽略 Git 与编辑器配置
 .git
 .gitignore
-dist
-build
+.vscode
+.idea
+*.swp
+*.swo
+
+# 忽略本地日志与临时文件
 *.log
-.env
-.env.local
-.guizang-skill
-.agents
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# 忽略文档和设计稿，减少构建体积（如不需要可注释掉）
+docs
+
+# 忽略 Docker 自身文件，避免无效缓存失效
+Dockerfile
+docker-compose.yml
+.dockerignore

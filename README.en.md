@@ -19,7 +19,7 @@
 
 ## 🌟 In one sentence
 
-HTML Editor is a **lightweight, no-signup collaborative HTML revision tool**. Just drop an AI-generated `.html` file into the page, then edit text and comment on elements with your team in real time. When you're done, download a clean HTML file or bundle the code + comments into a prompt for your AI to keep iterating.
+HTML Editor is a **lightweight, no-signup collaborative HTML editing tool**. Just drop an AI-generated `.html` file into the page, then edit text and comment on elements with your team in real time. When you're done, download a clean HTML file or bundle the code + comments into a prompt for your AI to keep iterating.
 
 > Think of it as editing an online document, but the document is HTML: every change syncs live, every opinion stays attached to the page, and you can hand the full context back to AI in one click. ✨
 
@@ -60,7 +60,7 @@ HTML Editor is a **lightweight, no-signup collaborative HTML revision tool**. Ju
 - **Real-time sync**: PartyKit + Yjs (CRDT)
 - **Server**: PartyKit Durable Object (one per room)
 - **Containerization**: Docker + Docker Compose
-- **Deployment target**: Cloudflare Pages (frontend) + PartyKit (sync server)
+- **Deployment target**: Vercel / Cloudflare Pages (static frontend) + PartyKit (real-time sync server)
 
 ---
 
@@ -78,6 +78,15 @@ npm run dev
 
 Then open `http://localhost:1214` in your browser.
 
+```bash
+# Useful scripts
+npm run dev          # Local dev on port 1214
+npm run build        # Build Vercel output to dist/
+npm run deploy       # Deploy the PartyKit server
+npm run vercel       # Deploy to Vercel
+npm run preview:web  # Preview static frontend only (no WebSocket)
+```
+
 ### Option 2: Docker
 
 ```bash
@@ -92,6 +101,42 @@ docker compose down
 ```
 
 The service runs at `http://localhost:1214` by default.
+
+> **Mirror acceleration for China**: `docker-compose.yml` defaults to `docker.m.daocloud.io/library/node:20-slim` as the base image and uses `https://registry.npmmirror.com` as the npm registry inside the container. If you don't need a mainland-China mirror, edit the `NODE_IMAGE` argument in `docker-compose.yml` or remove/adjust `environment.npm_config_registry`.
+
+### Option 3: Deploy to Vercel
+
+```bash
+# 1. Install Vercel CLI if you haven't
+npm i -g vercel
+
+# 2. Login and deploy
+vercel
+```
+
+Or use the **Deploy with Vercel** button to import directly from your Git repository.
+
+> **Note**: Vercel only hosts the static frontend. The real-time collaboration service still needs to be deployed to PartyKit.
+>
+> 1. Deploy the PartyKit service:
+>    ```bash
+>    npx partykit deploy
+>    ```
+> 2. Set the `PARTYKIT_HOST` environment variable in the Vercel dashboard (or during project linking), e.g. `html-editor-demo.your-username.partykit.dev`.
+> 3. `scripts/build-vercel.js` injects `PARTYKIT_HOST` into `PARTYKIT_PROD` in `web/src/collab.js` at build time. If unset, the frontend falls back to the current page host.
+>
+> `vercel.json` is already configured with routes: `/room.html` is served directly, and all other paths fall back to `index.html`.
+
+---
+
+## ⚙️ Environment variables
+
+| Variable | Description | Default | Use case |
+|----------|-------------|---------|----------|
+| `PARTYKIT_HOST` | PartyKit production host, e.g. `html-editor-demo.your-username.partykit.dev` | Empty string (falls back to current page host) | Vercel / custom static hosting |
+| `npm_config_registry` | npm registry URL | `https://registry.npmmirror.com` | Docker build |
+
+> You usually don't need to set `PARTYKIT_HOST` for local development: `collab.js` treats `localhost`, `127.0.0.1`, private IPs, and `.partykit.dev` as same-origin.
 
 ---
 
@@ -114,6 +159,10 @@ HTML_Editor/
 │   └── roadmap.md        # Roadmap
 ├── package.json
 ├── partykit.json
+├── vercel.json              # Vercel deployment config
+├── scripts/
+│   └── build-vercel.js      # Vercel build script
+├── .vercelignore            # Vercel ignore rules
 ├── Dockerfile
 └── docker-compose.yml
 ```
@@ -162,29 +211,3 @@ See the full roadmap at [`docs/roadmap.md`](./docs/roadmap.md).
 - **Switch mode**: Use the segmented control in the room top bar to toggle between **Edit** and **Comment** modes.
 - **Keyboard shortcut**: In the comment composer, press `⌘ + Enter` (Mac) or `Ctrl + Enter` (Windows) to save quickly.
 - **Hand off to AI**: Click **Export ▾ → Hand off to AI** to copy code and comments together into a prompt for your LLM.
-
----
-
-## 🤝 Contributing
-
-Issues and PRs are welcome!
-
-1. Fork this repository
-2. Create a feature branch: `git checkout -b feat/awesome-feature`
-3. Commit your changes: `git commit -m "feat: add some feature"`
-4. Push the branch: `git push origin feat/awesome-feature`
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-<div align="center">
-
-🚀 **Drop an HTML file and start collaborating now!** 🚀
-
-</div>

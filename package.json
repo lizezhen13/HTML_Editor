@@ -7,7 +7,9 @@
     "dev": "partykit dev --port 1214",
     "start": "partykit dev --port 1214",
     "deploy": "partykit deploy",
-    "preview:web": "npx serve web -p 1214"
+    "preview:web": "npx serve web -p 1214",
+    "build": "node scripts/build-vercel.js",
+    "vercel": "vercel"
   },
   "dependencies": {
     "partysocket": "^1.0.0",
