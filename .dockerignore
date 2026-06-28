@@ -1,0 +1,12 @@
+node_modules
+.partykit
+.wrangler
+.git
+.gitignore
+dist
+build
+*.log
+.env
+.env.local
+.guizang-skill
+.agents

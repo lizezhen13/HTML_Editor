@@ -1,0 +1,11 @@
+node_modules/
+.partykit/
+.wrangler/
+.DS_Store
+*.log
+dist/
+build/
+.env
+.env.local
+.guizang-skill/
+.agents/

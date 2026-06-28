@@ -1,0 +1,19 @@
+services:
+  html-editor:
+    build:
+      context: .
+    container_name: html-editor
+    init: true
+    ports:
+      - "1214:1214"
+    volumes:
+      - partykit-data:/app/.partykit
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:1214"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  partykit-data:

@@ -1,0 +1,22 @@
+{
+  "name": "html-editor",
+  "version": "1.0.0",
+  "description": "Collaborative editor for AI-generated HTML — edit, comment, export back to AI.",
+  "private": true,
+  "scripts": {
+    "dev": "partykit dev --port 1214",
+    "start": "partykit dev --port 1214",
+    "deploy": "partykit deploy",
+    "preview:web": "npx serve web -p 1214"
+  },
+  "dependencies": {
+    "partysocket": "^1.0.0",
+    "y-partykit": "^0.0.30",
+    "yjs": "^13.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "partykit": "^0.0.115",
+    "typescript": "^5.3.0"
+  }
+}
