@@ -82,7 +82,10 @@ Then open `http://localhost:1214` in your browser.
 # Useful scripts
 npm run dev          # Local dev on port 1214
 npm run build        # Build Vercel output to dist/
-npm run deploy       # Deploy the PartyKit server
+npm run build:worker # Build the Cloudflare Worker output
+npm run deploy       # Deploy realtime sync to party.lizezhen13.ccwu.cc via Wrangler
+npm run deploy:partykit  # Deploy the custom domain with the PartyKit CLI (fallback)
+npm run deploy:partykit:default  # Deploy to the default PartyKit domain
 npm run vercel       # Deploy to Vercel
 npm run preview:web  # Preview static frontend only (no WebSocket)
 ```
@@ -116,14 +119,18 @@ vercel
 
 Or use the **Deploy with Vercel** button to import directly from your Git repository.
 
-> **Note**: Vercel only hosts the static frontend. The real-time collaboration service still needs to be deployed to PartyKit.
+> **Note**: Vercel only hosts the static frontend. The real-time collaboration service still needs to be deployed to Cloudflare Worker / PartyKit.
 >
-> 1. Deploy the PartyKit service:
+> This project keeps the frontend on `lizezhen13.ccwu.cc` and deploys the real-time PartyKit service to `party.lizezhen13.ccwu.cc`.
+>
+> 1. Make sure `party.lizezhen13.ccwu.cc` is available in your Cloudflare account, then prepare `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`.
+> 2. Deploy the realtime sync service:
 >    ```bash
->    npx partykit deploy
+>    npm run deploy
 >    ```
-> 2. Set the `PARTYKIT_HOST` environment variable in the Vercel dashboard (or during project linking), e.g. `html-editor-demo.your-username.partykit.dev`.
-> 3. `scripts/build-vercel.js` injects `PARTYKIT_HOST` into `PARTYKIT_PROD` in `web/src/collab.js` at build time. If unset, the frontend falls back to the current page host.
+>    This first runs `scripts/build-cloudflare-worker.js`, then publishes the Durable Object through the Worker route and `new_sqlite_classes` migration in `wrangler.toml`.
+> 3. Set `PARTYKIT_HOST=party.lizezhen13.ccwu.cc` in the Vercel dashboard, then redeploy the frontend.
+> 4. `scripts/build-vercel.js` injects `PARTYKIT_HOST` into `PARTYKIT_PROD` in `dist/src/collab.js` at build time. If unset, it still defaults to `party.lizezhen13.ccwu.cc`.
 >
 > `vercel.json` is already configured with routes: `/room.html` is served directly, and all other paths fall back to `index.html`.
 
@@ -133,7 +140,9 @@ Or use the **Deploy with Vercel** button to import directly from your Git reposi
 
 | Variable | Description | Default | Use case |
 |----------|-------------|---------|----------|
-| `PARTYKIT_HOST` | PartyKit production host, e.g. `html-editor-demo.your-username.partykit.dev` | Empty string (falls back to current page host) | Vercel / custom static hosting |
+| `PARTYKIT_HOST` | PartyKit production host, e.g. `party.lizezhen13.ccwu.cc` | `party.lizezhen13.ccwu.cc` | Vercel / custom static hosting |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID | None | Wrangler / PartyKit custom-domain deploy |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token | None | Wrangler / PartyKit custom-domain deploy |
 | `npm_config_registry` | npm registry URL | `https://registry.npmmirror.com` | Docker build |
 
 > You usually don't need to set `PARTYKIT_HOST` for local development: `collab.js` treats `localhost`, `127.0.0.1`, private IPs, and `.partykit.dev` as same-origin.

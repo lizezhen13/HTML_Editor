@@ -1,0 +1,7 @@
+{
+  "$schema": "https://www.partykit.io/schema.json",
+  "name": "html-editor",
+  "domain": "party.lizezhen13.ccwu.cc",
+  "main": "party/server.ts",
+  "compatibilityDate": "2024-09-01"
+}

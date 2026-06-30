@@ -1,0 +1,14 @@
+name = "html-editor"
+main = ".wrangler-partykit/worker.js"
+compatibility_date = "2024-09-01"
+workers_dev = false
+
+routes = ["party.lizezhen13.ccwu.cc/*"]
+
+[[durable_objects.bindings]]
+name = "PARTYKIT_DURABLE"
+class_name = "PartyKitDurable"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PartyKitDurable"]

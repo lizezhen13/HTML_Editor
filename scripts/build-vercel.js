@@ -25,14 +25,33 @@ function copyDir(src, dest) {
   }
 }
 
-// 清理并重新生成输出目录
-if (fs.existsSync(OUT_DIR)) {
-  fs.rmSync(OUT_DIR, { recursive: true, force: true });
+// 确保输出目录存在。Vercel 使用干净工作区，本地重复构建时直接覆盖同名文件。
+if (!fs.existsSync(OUT_DIR)) {
+  fs.mkdirSync(OUT_DIR, { recursive: true });
 }
 copyDir(SRC_DIR, OUT_DIR);
 
-// 如果环境变量中配置了 PartyKit 生产地址，则写入前端脚本
-const partykitHost = process.env.PARTYKIT_HOST || '';
+const DEFAULT_PARTYKIT_HOST = 'party.lizezhen13.ccwu.cc';
+
+function normalizeHost(host) {
+  const value = (host || '').trim();
+  if (!value) return '';
+
+  try {
+    if (/^[a-z]+:\/\//i.test(value)) {
+      return new URL(value).host;
+    }
+  } catch {
+    // Fall through to string cleanup for partially typed host values.
+  }
+
+  return value
+    .replace(/^(https?|wss?):\/\//i, '')
+    .replace(/\/+$/, '');
+}
+
+// 写入前端脚本。Vercel 未设置环境变量时，默认连接自定义 PartyKit 域名。
+const partykitHost = normalizeHost(process.env.PARTYKIT_HOST || DEFAULT_PARTYKIT_HOST);
 if (partykitHost) {
   const collabPath = path.join(OUT_DIR, 'src', 'collab.js');
   if (fs.existsSync(collabPath)) {

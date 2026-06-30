@@ -82,7 +82,10 @@ npm run dev
 # 常用脚本
 npm run dev          # 本地开发，端口 1214
 npm run build        # 构建 Vercel 产物到 dist/
-npm run deploy       # 部署 PartyKit 服务
+npm run build:worker # 构建 Cloudflare Worker 产物
+npm run deploy       # 通过 Wrangler 部署实时协作服务到 party.lizezhen13.ccwu.cc
+npm run deploy:partykit  # 使用 PartyKit CLI 部署自定义域名（备用）
+npm run deploy:partykit:default  # 部署到 PartyKit 默认域名
 npm run vercel       # 部署到 Vercel
 npm run preview:web  # 仅预览静态前端（不启动 WebSocket）
 ```
@@ -116,14 +119,18 @@ vercel
 
 或者点击 **「Deploy with Vercel」** 按钮从 Git 仓库一键导入。
 
-> **注意**：Vercel 只托管前端静态页面，实时协作服务仍需部署到 PartyKit。
+> **注意**：Vercel 只托管前端静态页面，实时协作服务仍需部署到 Cloudflare Worker / PartyKit。
 >
-> 1. 部署 PartyKit 服务：
+> 当前配置会让前端页面继续部署在 `lizezhen13.ccwu.cc`，实时协作服务部署在 `party.lizezhen13.ccwu.cc`。
+>
+> 1. 确认 `party.lizezhen13.ccwu.cc` 已在你的 Cloudflare 账号下可用，并准备好 `CLOUDFLARE_ACCOUNT_ID` 和 `CLOUDFLARE_API_TOKEN`。
+> 2. 部署实时协作服务：
 >    ```bash
->    npx partykit deploy
+>    npm run deploy
 >    ```
-> 2. 在 Vercel 控制台（或项目链接时）设置环境变量 `PARTYKIT_HOST`，例如 `html-editor-demo.your-username.partykit.dev`。
-> 3. `scripts/build-vercel.js` 会在构建阶段把 `PARTYKIT_HOST` 注入到 `web/src/collab.js` 的 `PARTYKIT_PROD` 中；若未设置，前端会回退到当前页面 host。
+>    该命令会先执行 `scripts/build-cloudflare-worker.js`，再通过 `wrangler.toml` 中的 Worker route 和 `new_sqlite_classes` migration 发布 Durable Object。
+> 3. 在 Vercel 控制台设置环境变量 `PARTYKIT_HOST=party.lizezhen13.ccwu.cc`，然后重新部署前端。
+> 4. `scripts/build-vercel.js` 会在构建阶段把 `PARTYKIT_HOST` 注入到 `dist/src/collab.js` 的 `PARTYKIT_PROD` 中；若未设置，也会默认注入 `party.lizezhen13.ccwu.cc`。
 >
 > `vercel.json` 已配置路由：`/room.html` 直接访问，其余路径回退到 `index.html`。
 
@@ -133,7 +140,9 @@ vercel
 
 | 变量 | 说明 | 默认值 | 适用场景 |
 |------|------|--------|----------|
-| `PARTYKIT_HOST` | PartyKit 生产环境主机地址，例如 `html-editor-demo.your-username.partykit.dev` | 空字符串（回退到当前页面 host） | Vercel / 自定义静态托管 |
+| `PARTYKIT_HOST` | PartyKit 生产环境主机地址，例如 `party.lizezhen13.ccwu.cc` | `party.lizezhen13.ccwu.cc` | Vercel / 自定义静态托管 |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账号 ID | 无 | Wrangler / PartyKit 自定义域名部署 |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token | 无 | Wrangler / PartyKit 自定义域名部署 |
 | `npm_config_registry` | npm 镜像源 | `https://registry.npmmirror.com` | Docker 构建 |
 
 > 本地开发时一般不需要设置 `PARTYKIT_HOST`，因为 `collab.js` 会自动识别 `localhost`、`127.0.0.1`、内网 IP 和 `.partykit.dev` 为同域。

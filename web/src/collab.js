@@ -27,9 +27,8 @@ import YPartyKitProvider from 'y-partykit/provider';
 
 // Decide which PartyKit host to talk to.
 // Local dev and same-origin PartyKit deployments use `location.host`.
-// For any other origin (e.g. GitHub Pages / custom domain), set the prod
-// PartyKit host below before deploying.
-const PARTYKIT_PROD = '';
+// Production frontend deployments connect to the custom PartyKit domain.
+const PARTYKIT_PROD = 'party.lizezhen13.ccwu.cc';
 const PARTYKIT_HOST = (() => {
   const h = location.hostname;
   const sameOrigin =

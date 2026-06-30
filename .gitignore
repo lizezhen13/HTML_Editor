@@ -1,6 +1,7 @@
 node_modules/
 .partykit/
 .wrangler/
+.wrangler-partykit/
 .DS_Store
 *.log
 dist/
