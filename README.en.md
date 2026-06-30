@@ -198,22 +198,6 @@ For details, see [`docs/architecture.md`](./docs/architecture.md).
 
 ---
 
-## 🗺️ Roadmap
-
-- [x] Landing page drag-and-drop upload and visual prototype
-- [x] Collaboration room UI: editor, comments sidebar, status strip
-- [x] Real-time text and comment sync
-- [x] User identity (nickname + color)
-- [x] Export clean HTML / Export AI prompt
-- [ ] Persist snapshots to R2 / KV
-- [ ] Mobile read-only view
-- [ ] Room metadata page
-- [ ] Public deploy and abuse protection
-
-See the full roadmap at [`docs/roadmap.md`](./docs/roadmap.md).
-
----
-
 ## 📝 Tips
 
 - **Switch language**: Click the globe icon 🌐 in the top-right corner of the landing page to switch between **English / 中文**. English is the fallback if your system language is not Chinese.
