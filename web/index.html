@@ -750,23 +750,41 @@
     const reader = new FileReader();
     reader.onload = e => {
       const roomId = generateRoomId();
+      const ownerKey = generateOwnerKey();
       try {
         sessionStorage.setItem('hce-init-html-' + roomId, e.target.result);
         sessionStorage.setItem('hce-init-name-' + roomId, f.name);
+        sessionStorage.setItem('hce-owner-key-' + roomId, ownerKey);
+        localStorage.setItem('hce-owner-key-' + roomId, ownerKey);
       } catch (err) {
         alert('Could not stash file in sessionStorage: ' + err.message);
         return;
       }
       rememberRoom({ roomId, filename: f.name });
-      location.href = './room.html?room=' + roomId;
+      location.href = './room.html?room=' + encodeURIComponent(roomId);
     };
     reader.readAsText(f);
   }
 
   function generateRoomId() {
+    return randomToken(16);
+  }
+
+  function generateOwnerKey() {
+    return randomToken(32);
+  }
+
+  function randomToken(bytes) {
+    if (window.crypto && crypto.getRandomValues) {
+      const buf = new Uint8Array(bytes);
+      crypto.getRandomValues(buf);
+      let bin = '';
+      buf.forEach(b => { bin += String.fromCharCode(b); });
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
     const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
     let id = '';
-    for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
+    for (let i = 0; i < bytes * 2; i++) id += chars[Math.floor(Math.random() * chars.length)];
     return id;
   }
 

@@ -66,6 +66,10 @@ const state = {
   mode: 'edit',
   user: null,
   collab: null,
+  ownerKey: null,
+  ownerProof: null,
+  accessProof: null,
+  hasLocalFile: false,
   // Pending comment composer state
   composer: {
     open: false,
@@ -103,7 +107,16 @@ function touchRecent(roomId, filename) {
 const I18N = {
   upload:{en:'↑ Upload',zh:'↑ 上传'}, upload_t:{en:'Upload a new file to replace the current document',zh:'上传新文件替换当前文档'},
   edit:{en:'Edit',zh:'编辑'}, comment:{en:'Comment',zh:'批注'},
-  share:{en:'Share',zh:'分享'}, share_head:{en:'Anyone with this link can view and edit',zh:'拿到链接的人都能查看和编辑'},
+  share:{en:'Share',zh:'分享'}, share_head:{en:'Set an access key before sharing this room.',zh:'分享前先设置这个房间的访问密钥。'},
+  share_ready:{en:'Share this link. Visitors must enter the access key to open the room.',zh:'分享这个链接。访客必须输入访问密钥才能打开房间。'},
+  share_loading:{en:'Checking room protection...',zh:'正在检查房间保护状态...'},
+  share_key_label:{en:'Access key',zh:'访问密钥'}, share_key_ph:{en:'Enter a key for this room',zh:'输入这个房间的密钥'},
+  share_key_save:{en:'Set key',zh:'设置密钥'}, share_key_hint:{en:'This key is fixed once set and is not included in the link.',zh:'密钥设置后固定，且不会包含在链接里。'},
+  share_key_set:{en:'Access key set. You can copy the protected link now.',zh:'访问密钥已设置，现在可以复制受保护链接。'},
+  share_key_busy:{en:'Setting key...',zh:'正在设置密钥...'}, share_key_owner_only:{en:'Only the room creator can set the key from the original browser.',zh:'只有房间创建者能在原浏览器里设置密钥。'},
+  share_key_exists:{en:'This room already has an access key.',zh:'这个房间已经设置了访问密钥。'},
+  share_key_short:{en:'Use at least 6 characters.',zh:'密钥至少需要 6 个字符。'},
+  share_key_error:{en:'Could not update the access key. Try again.',zh:'访问密钥设置失败，请重试。'},
   copy:{en:'Copy',zh:'复制'}, copied:{en:'Copied',zh:'已复制'}, export:{en:'Export ▾',zh:'导出 ▾'},
   exp_dl:{en:'Download HTML',zh:'下载 HTML'}, exp_dl_sub:{en:'Clean .html file — no comments. For sharing or final use.',zh:'干净的 .html 文件，不含批注。用于分享或定稿。'},
   exp_ai:{en:'Hand off to AI',zh:'交给 AI'}, exp_ai_sub:{en:'HTML + comments as a Markdown prompt — copy or download .md.',zh:'把 HTML + 批注导成 Markdown 提示词，可复制或下载 .md。'},
@@ -116,6 +129,12 @@ const I18N = {
   user_unit_one:{en:' user',zh:' 位用户'}, user_unit:{en:' users',zh:' 位用户'}, you_hint:{en:' (you — click to change)',zh:'（你——点击修改）'},
   nick_title:{en:'Editing together',zh:'一起编辑'}, nick_h:{en:'Pick a nickname',zh:'取个昵称'}, nick_sub:{en:'So others know who edited and commented. No account needed.',zh:'让协作者知道是谁在编辑和批注。无需注册账号。'},
   nick_name:{en:'Name',zh:'昵称'}, nick_name_ph:{en:'Your name',zh:'你的名字'}, nick_color:{en:'Color',zh:'颜色'},
+  access_title:{en:'Protected room',zh:'受保护的房间'}, access_h:{en:'Enter the access key',zh:'输入访问密钥'},
+  access_sub:{en:'This shared room is protected. Ask the creator for the key to open it.',zh:'这个共享房间已受保护。请向创建者获取密钥后打开。'},
+  access_key:{en:'Access key',zh:'访问密钥'}, access_key_ph:{en:'Access key',zh:'访问密钥'},
+  access_submit:{en:'Unlock',zh:'解锁'}, access_checking:{en:'Checking key...',zh:'正在校验密钥...'},
+  access_required:{en:'Enter the access key.',zh:'请输入访问密钥。'}, access_wrong:{en:'That key does not match this room.',zh:'密钥与这个房间不匹配。'},
+  access_unavailable:{en:'Could not verify the key. Check the connection and try again.',zh:'无法校验密钥，请检查连接后重试。'},
   exp_modal_hint:{en:'Paste into a chat for the next revision pass, or download as a Markdown file to attach in Claude Projects, NotebookLM, email, etc.',zh:'粘贴到对话里进行下一轮修订，或下载为 Markdown 文件，附到 Claude Projects、NotebookLM、邮件等处。'},
   t_bad_file:{en:'Please drop an .html or .htm file',zh:'请拖入 .html 或 .htm 文件'}, t_too_big:{en:'File too large (max 2 MB)',zh:'文件过大（上限 2 MB）'},
   t_replaced:{en:'Replaced with ',zh:'已替换为 '}, t_cmt_saved:{en:'Comment saved',zh:'批注已保存'}, t_cmt_updated:{en:'Comment updated',zh:'批注已更新'},
@@ -158,10 +177,154 @@ function setLang(lang) {
   sendToIframe({ cmd: 'set-lang', lang: hceLang });   // translate the in-iframe panel
 }
 
-// ─── Init ───────────────────────────────────────
+// ─── Room access keys ─────────────────────────────────────────────────────
+const PARTYKIT_PROD = 'party.lizezhen13.ccwu.cc';
+const ACCESS_KEY_MIN = 6;
+
+function getPartyHost() {
+  const h = location.hostname;
+  const sameOrigin =
+    h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' ||
+    /^192\.168\./.test(h) || /^10\./.test(h) ||
+    h.endsWith('.partykit.dev');
+  return sameOrigin ? location.host : (PARTYKIT_PROD || location.host);
+}
+
+function getPartyHttpUrl(action) {
+  const host = getPartyHost();
+  const isLocal =
+    host.startsWith('localhost:') || host.startsWith('127.0.0.1:') ||
+    host.startsWith('0.0.0.0:') || host.startsWith('192.168.') ||
+    host.startsWith('10.') || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+  const protocol = isLocal ? 'http' : 'https';
+  return `${protocol}://${host}/parties/main/${encodeURIComponent(state.roomId)}?action=${encodeURIComponent(action)}`;
+}
+
+function getShareUrl() {
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('room', state.roomId);
+  return url.toString();
+}
+
+function loadOwnerKey(roomId) {
+  try {
+    return sessionStorage.getItem('hce-owner-key-' + roomId)
+      || localStorage.getItem('hce-owner-key-' + roomId);
+  } catch {
+    return null;
+  }
+}
+
+function saveOwnerKey(roomId, key) {
+  try {
+    sessionStorage.setItem('hce-owner-key-' + roomId, key);
+    localStorage.setItem('hce-owner-key-' + roomId, key);
+  } catch {}
+}
+
+function randomToken(bytes) {
+  if (window.crypto && crypto.getRandomValues) {
+    const buf = new Uint8Array(bytes);
+    crypto.getRandomValues(buf);
+    return bytesToBase64Url(buf);
+  }
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+  let id = '';
+  for (let i = 0; i < bytes * 2; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
+function bytesToBase64Url(bytes) {
+  let bin = '';
+  new Uint8Array(bytes).forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+async function sha256Base64Url(text) {
+  if (!crypto?.subtle) throw new Error('Web Crypto is not available');
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return bytesToBase64Url(digest);
+}
+
+async function deriveRoomProof(kind, secret) {
+  return sha256Base64Url(`hce:${kind}:proof:v1:${state.roomId}:${secret}`);
+}
+
+async function postRoomAccess(action, body) {
+  const res = await fetch(getPartyHttpUrl(action), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {}),
+  });
+  let data = {};
+  try { data = await res.json(); } catch {}
+  if (!res.ok) {
+    const err = new Error(data.error || 'request_failed');
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+async function ensureAccessBeforeOpen({ hasLocalFile, collabOff }) {
+  if (collabOff || hasLocalFile || state.ownerProof) return;
+  const modal = document.getElementById('access-modal-bg');
+  const input = document.getElementById('access-key');
+  const submit = document.getElementById('access-submit');
+  const error = document.getElementById('access-error');
+  if (!modal || !input || !submit || !error) return;
+
+  modal.classList.add('show');
+  input.value = '';
+  error.textContent = '';
+
+  await new Promise(resolve => {
+    let busy = false;
+    async function tryUnlock() {
+      if (busy) return;
+      const key = input.value.trim();
+      if (!key) {
+        error.textContent = t('access_required');
+        input.focus();
+        return;
+      }
+      busy = true;
+      submit.disabled = true;
+      submit.textContent = t('access_checking');
+      error.textContent = '';
+      try {
+        const accessProof = await deriveRoomProof('access', key);
+        await postRoomAccess('verify-access-key', { accessProof });
+        state.accessProof = accessProof;
+        modal.classList.remove('show');
+        resolve();
+      } catch (err) {
+        error.textContent = err.status === 403 || err.status === 404
+          ? t('access_wrong')
+          : t('access_unavailable');
+        input.select();
+      } finally {
+        busy = false;
+        submit.disabled = false;
+        submit.textContent = t('access_submit');
+      }
+    }
+    submit.onclick = tryUnlock;
+    input.onkeydown = e => {
+      if (e.key === 'Enter') tryUnlock();
+    };
+    setTimeout(() => input.focus(), 50);
+  });
+}
+
 async function init() {
   const params = new URLSearchParams(location.search);
   state.roomId = params.get('room') || 'local-' + Math.random().toString(36).slice(2, 8);
+  state.ownerKey = loadOwnerKey(state.roomId);
+  if (state.ownerKey) state.ownerProof = await deriveRoomProof('owner', state.ownerKey);
 
   // Apply the saved language (chosen on the homepage) to the static chrome.
   applyStaticI18n();
@@ -171,15 +334,27 @@ async function init() {
   document.getElementById('slide-next')?.addEventListener('click', () => sendToIframe({ cmd: 'nav-slide', dir: 'right' }));
   initStyleToolbar();
 
+  // Initial HTML. Visitors without the creator's local file must unlock the
+  // room before we ask for identity or connect to PartyKit.
+  let initialHTML = sessionStorage.getItem('hce-init-html-' + state.roomId);
+  state.hasLocalFile = !!initialHTML;
+  state.filename = sessionStorage.getItem('hce-init-name-' + state.roomId) || 'demo.html';
+  if (state.hasLocalFile && !state.ownerKey) {
+    state.ownerKey = randomToken(32);
+    saveOwnerKey(state.roomId, state.ownerKey);
+    state.ownerProof = await deriveRoomProof('owner', state.ownerKey);
+  }
+  await ensureAccessBeforeOpen({
+    hasLocalFile: state.hasLocalFile,
+    collabOff: params.get('collab') === 'off',
+  });
+
   // Identity
   state.user = loadUser() || await promptForNickname({ allowCancel: false });
   saveUser(state.user);
   document.getElementById('nick-modal-bg').classList.remove('show');
   applyUsers([state.user]);
 
-  // Initial HTML
-  let initialHTML = sessionStorage.getItem('hce-init-html-' + state.roomId);
-  state.filename = sessionStorage.getItem('hce-init-name-' + state.roomId) || 'demo.html';
   if (!initialHTML) initialHTML = DEMO_HTML;
   document.getElementById('fname').textContent = state.filename;
 
@@ -200,7 +375,6 @@ async function init() {
   // Otherwise (joined a shared room link) DEFER the initial render until
   // collab connects — that way late joiners see the actual document, not
   // a flash of DEMO content before it's replaced.
-  const hasLocalFile = !!sessionStorage.getItem('hce-init-html-' + state.roomId);
   let initialRendered = false;
   function doInitialRender() {
     if (initialRendered) return;
@@ -208,7 +382,7 @@ async function init() {
     renderIframe();
     renderComments();
   }
-  if (hasLocalFile) doInitialRender();
+  if (state.hasLocalFile) doInitialRender();
 
   // Watchdog: never let the canvas spin forever. The non-local path defers
   // the first render until collab delivers the real document — but if collab
@@ -1356,18 +1530,110 @@ window.toggleShareMenu = function (e) {
   document.getElementById('export-menu')?.classList.remove('show');
   menu.classList.toggle('show', willShow);
   if (willShow) {
-    const input = document.getElementById('share-url');
-    input.value = location.href;
-    setTimeout(() => { input.select(); }, 30);
-    const copy = document.getElementById('share-copy');
-    copy.onclick = async () => {
-      try { await navigator.clipboard.writeText(input.value); }
-      catch { input.select(); document.execCommand('copy'); }
-      copy.textContent = t('copied');
-      setTimeout(() => { copy.textContent = t('copy'); }, 1400);
-    };
+    refreshSharePanel();
   }
 };
+
+async function refreshSharePanel() {
+  const head = document.getElementById('share-head');
+  const keyPanel = document.getElementById('share-key-panel');
+  const linkRow = document.getElementById('share-link-row');
+  const linkInput = document.getElementById('share-url');
+  const copy = document.getElementById('share-copy');
+  const keyInput = document.getElementById('share-key');
+  const keySave = document.getElementById('share-key-save');
+  const note = document.getElementById('share-key-note');
+  if (!head || !keyPanel || !linkRow || !linkInput || !copy || !keyInput || !keySave || !note) return;
+
+  linkInput.value = getShareUrl();
+  copy.onclick = async () => {
+    try { await navigator.clipboard.writeText(linkInput.value); }
+    catch { linkInput.select(); document.execCommand('copy'); }
+    copy.textContent = t('copied');
+    setTimeout(() => { copy.textContent = t('copy'); }, 1400);
+  };
+
+  function showLink() {
+    head.textContent = t('share_ready');
+    keyPanel.hidden = true;
+    linkRow.hidden = false;
+    setTimeout(() => { linkInput.select(); }, 30);
+  }
+
+  function showKeySetup(messageKey = 'share_key_hint') {
+    head.textContent = t('share_head');
+    keyPanel.hidden = false;
+    linkRow.hidden = true;
+    note.textContent = t(messageKey);
+    keyInput.value = '';
+    keySave.disabled = false;
+    keySave.textContent = t('share_key_save');
+    setTimeout(() => { keyInput.focus(); }, 30);
+  }
+
+  if (state.accessProof) {
+    showLink();
+    return;
+  }
+
+  if (!state.ownerProof) {
+    head.textContent = t('share_key_owner_only');
+    keyPanel.hidden = true;
+    linkRow.hidden = true;
+    return;
+  }
+
+  head.textContent = t('share_loading');
+  keyPanel.hidden = true;
+  linkRow.hidden = true;
+
+  try {
+    const status = await postRoomAccess('access-status', { ownerProof: state.ownerProof });
+    if (status.hasAccessKey) {
+      showLink();
+      return;
+    }
+    if (!status.isOwner) {
+      head.textContent = t('share_key_owner_only');
+      return;
+    }
+    showKeySetup();
+  } catch {
+    showKeySetup('share_key_error');
+  }
+
+  keySave.onclick = async () => {
+    const key = keyInput.value.trim();
+    if (key.length < ACCESS_KEY_MIN) {
+      note.textContent = t('share_key_short');
+      keyInput.focus();
+      return;
+    }
+    keySave.disabled = true;
+    keySave.textContent = t('share_key_busy');
+    note.textContent = '';
+    try {
+      const accessProof = await deriveRoomProof('access', key);
+      await postRoomAccess('set-access-key', {
+        ownerProof: state.ownerProof,
+        accessProof,
+      });
+      state.accessProof = accessProof;
+      keyInput.value = '';
+      toast(t('share_key_set'));
+      showLink();
+    } catch (err) {
+      if (err.status === 409) {
+        note.textContent = t('share_key_exists');
+        showLink();
+        return;
+      }
+      note.textContent = err.status === 403 ? t('share_key_owner_only') : t('share_key_error');
+      keySave.disabled = false;
+      keySave.textContent = t('share_key_save');
+    }
+  };
+}
 
 window.toggleExportMenu = function (e) {
   e.stopPropagation();

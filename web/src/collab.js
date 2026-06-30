@@ -47,6 +47,12 @@ export async function connectCollab(state, handlers) {
   const provider = new YPartyKitProvider(PARTYKIT_HOST, state.roomId, yDoc, {
     party: 'main',
     connect: true,
+    params: () => {
+      const params = {};
+      if (state.accessProof) params.access = state.accessProof;
+      if (state.ownerProof) params.owner = state.ownerProof;
+      return params;
+    },
   });
 
   provider.awareness.setLocalStateField('user', state.user);

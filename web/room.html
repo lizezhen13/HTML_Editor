@@ -697,6 +697,29 @@
     font-size: 12px;
     color: var(--muted);
     margin-bottom: 8px;
+    line-height: 1.45;
+  }
+  .share-key-panel {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .share-key-panel[hidden],
+  .share-input-row[hidden] {
+    display: none;
+  }
+  .share-key-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .share-note {
+    min-height: 16px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--muted);
   }
   .share-input-row {
     display: flex;
@@ -714,6 +737,10 @@
     color: var(--ink);
   }
   .share-input-row .btn { height: 36px; }
+  .share-input-row .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
 
   /* ── Status strip ───────────────────────────── */
   .status-strip {
@@ -866,6 +893,48 @@
   }
   .nick-modal .color-chip.selected {
     box-shadow: 0 0 0 2px var(--ink);
+  }
+
+  .access-modal { max-width: 440px; }
+  .access-modal .modal-body { padding: 28px 24px 24px; }
+  .access-modal h3 {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+  .access-modal .sub {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    line-height: 1.55;
+    margin-bottom: 20px;
+  }
+  .access-modal label {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .access-modal input {
+    width: 100%;
+    height: 40px;
+    font-size: var(--text-sm);
+    background: var(--panel-2);
+    border: var(--rule-w) solid var(--rule-strong);
+    border-radius: var(--radius-sm);
+    padding: 0 12px;
+    color: var(--ink);
+    outline: none;
+  }
+  .access-modal input:focus {
+    border-color: var(--signal);
+    box-shadow: 0 0 0 3px rgba(120, 113, 255, 0.14);
+  }
+  .access-error {
+    min-height: 18px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--error);
   }
 
   /* ── 响应式适配 ─────────────────────────────── */
@@ -1239,8 +1308,16 @@
     <div style="position:relative;">
       <button class="btn" id="share-btn" onclick="toggleShareMenu(event)" data-i18n="share">Share</button>
       <div class="popover share-pop" id="share-menu">
-        <div class="share-head" data-i18n="share_head">Anyone with this link can view and edit</div>
-        <div class="share-input-row">
+        <div class="share-head" id="share-head" data-i18n="share_head">Set an access key before sharing this room.</div>
+        <div class="share-key-panel" id="share-key-panel" hidden>
+          <label class="share-key-label" for="share-key" data-i18n="share_key_label">Access key</label>
+          <div class="share-input-row">
+            <input type="password" id="share-key" data-i18n-ph="share_key_ph" placeholder="Enter a key for this room" autocomplete="new-password">
+            <button class="btn btn-primary" id="share-key-save" data-i18n="share_key_save">Set key</button>
+          </div>
+          <div class="share-note" id="share-key-note" data-i18n="share_key_hint">This key is fixed once set and is not included in the link.</div>
+        </div>
+        <div class="share-input-row" id="share-link-row" hidden>
           <input type="text" id="share-url" readonly>
           <button class="btn btn-primary" id="share-copy" data-i18n="copy">Copy</button>
         </div>
@@ -1387,6 +1464,25 @@
   <span id="user-count">1 user</span>
   <span class="sep">·</span>
   <span id="save-state"><span class="dot ok"></span>Saved</span>
+</div>
+
+<!-- Access-key modal -->
+<div class="modal-bg" id="access-modal-bg">
+  <div class="modal access-modal">
+    <div class="modal-head">
+      <h2 data-i18n="access_title">Protected room</h2>
+    </div>
+    <div class="modal-body">
+      <h3 data-i18n="access_h">Enter the access key</h3>
+      <p class="sub" data-i18n="access_sub">This shared room is protected. Ask the creator for the key to open it.</p>
+      <label for="access-key" data-i18n="access_key">Access key</label>
+      <input type="password" id="access-key" data-i18n-ph="access_key_ph" placeholder="Access key" autocomplete="current-password">
+      <div class="access-error" id="access-error"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="access-submit" data-i18n="access_submit">Unlock</button>
+    </div>
+  </div>
 </div>
 
 <!-- Nickname modal -->
